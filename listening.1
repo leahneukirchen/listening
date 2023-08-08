@@ -1,0 +1,88 @@
+.Dd August 8, 2023
+.Dt LISTENING 1
+.Os
+.Sh NAME
+.Nm listening
+.Nd check if a TCP server is listening
+.Sh SYNOPSIS
+.Nm
+.Oo Fl t Ar connect-timeout Oc
+.Oo Fl w Ar wait-timeout Oc
+.Oo Ar host Ns \&: Oc Ns Ar port
+.Sh DESCRIPTION
+The
+.Nm
+utility performs a TCP scan against the given
+.Ar host
+.Po defaulting to localhost Pc
+and
+.Ar port .
+.Pp
+This can be used to detect if a slowly starting service is ready to
+accept connections.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl t Ar connect-timeout
+Wait at most
+.Ar connect-timeout
+seconds per connection attempt
+.Po default: 0.2s, decimal fractions are allowed Pc .
+.It Fl w Ar wait-timeout
+Wait at most
+.Ar wait-timeout
+seconds total
+.Po decimal fractions are allowed Pc ,
+and keep trying to connecting when connection has been refused.
+.El
+.Sh DETAILS
+.Nm
+implements a TCP SYN scan (half-open scan),
+which has several benefits:
+.Bl -bullet
+.It
+As the target program does not
+.Xr accept 2
+the connection, there's no trace of testing.
+.It
+It's possible to do in unprivileged Linux userspace,
+thanks to
+.Dv TCP_QUICKACK
+and
+.Dv SO_LINGER
+.Po but also Linux specific Pc .
+.El
+.Pp
+Note that firewalls may block this kind of scan,
+so for reliable results
+.Nm
+should be used on localhost only or within a DMZ.
+.Sh EXIT STATUS
+.Nm
+returns one of the following status codes:
+.Pp
+.Bl -tag -compact -width Ds
+.It 0
+when the port is up
+.It 1
+when the port refuses connection
+.It 2
+when timeout was reached
+.It 99
+if some other error occurred
+.El
+.Sh SEE ALSO
+.Xr nc 1 ,
+.Xr nmap 1
+.Sh AUTHORS
+.An Leah Neukirchen Aq Mt leah@vuxu.org
+.Sh LICENSE
+.Nm
+is in the public domain.
+.Pp
+To the extent possible under law,
+the creator of this work
+has waived all copyright and related or
+neighboring rights to this work.
+.Pp
+.Lk http://creativecommons.org/publicdomain/zero/1.0/

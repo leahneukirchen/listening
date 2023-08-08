@@ -1,0 +1,62 @@
+LISTENING(1)                General Commands Manual               LISTENING(1)
+
+NAME
+     listening – check if a TCP server is listening
+
+SYNOPSIS
+     listening [-t connect-timeout] [-w wait-timeout] [host:]port
+
+DESCRIPTION
+     The listening utility performs a TCP scan against the given host
+     (defaulting to localhost) and port.
+
+     This can be used to detect if a slowly starting service is ready to
+     accept connections.
+
+     The options are as follows:
+
+     -t connect-timeout
+             Wait at most connect-timeout seconds per connection attempt
+             (default: 0.2s, decimal fractions are allowed).
+
+     -w wait-timeout
+             Wait at most wait-timeout seconds total (decimal fractions are
+             allowed), and keep trying to connecting when connection has been
+             refused.
+
+DETAILS
+     listening implements a TCP SYN scan (half-open scan), which has several
+     benefits:
+
+     •   As the target program does not accept(2) the connection, there's no
+         trace of testing.
+
+     •   It's possible to do in unprivileged Linux userspace, thanks to
+         TCP_QUICKACK and SO_LINGER (but also Linux specific).
+
+     Note that firewalls may block this kind of scan, so for reliable results
+     listening should be used on localhost only or within a DMZ.
+
+EXIT STATUS
+     listening returns one of the following status codes:
+
+     0       when the port is up
+     1       when the port refuses connection
+     2       when timeout was reached
+     99      if some other error occurred
+
+SEE ALSO
+     nc(1), nmap(1)
+
+AUTHORS
+     Leah Neukirchen <leah@vuxu.org>
+
+LICENSE
+     listening is in the public domain.
+
+     To the extent possible under law, the creator of this work has waived all
+     copyright and related or neighboring rights to this work.
+
+     http://creativecommons.org/publicdomain/zero/1.0/
+
+Void Linux                      August 8, 2023                      Void Linux
