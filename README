@@ -4,7 +4,7 @@ NAME
      listening – check if a TCP server is listening
 
 SYNOPSIS
-     listening [-t connect-timeout] [-w wait-timeout] [host:]port
+     listening [-46] [-t connect-timeout] [-w wait-timeout] [host] port
 
 DESCRIPTION
      The listening utility performs a TCP scan against the given host
@@ -15,6 +15,10 @@ DESCRIPTION
 
      The options are as follows:
 
+     -4      Force use of IPv4.
+
+     -6      Force use of IPv6.
+
      -t connect-timeout
              Wait at most connect-timeout seconds per connection attempt
              (default: 0.2s, decimal fractions are allowed).
@@ -22,7 +26,7 @@ DESCRIPTION
      -w wait-timeout
              Wait at most wait-timeout seconds total (decimal fractions are
              allowed), and keep trying to connecting when connection has been
-             refused.
+             refused (default: only try once).
 
 DETAILS
      listening implements a TCP SYN scan (half-open scan), which has several

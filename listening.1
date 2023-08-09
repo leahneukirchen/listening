@@ -6,9 +6,11 @@
 .Nd check if a TCP server is listening
 .Sh SYNOPSIS
 .Nm
+.Op Fl 46
 .Oo Fl t Ar connect-timeout Oc
 .Oo Fl w Ar wait-timeout Oc
-.Oo Ar host Ns \&: Oc Ns Ar port
+.Op Ar host
+.Ar port
 .Sh DESCRIPTION
 The
 .Nm
@@ -23,6 +25,10 @@ accept connections.
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
+.It Fl 4
+Force use of IPv4.
+.It Fl 6
+Force use of IPv6.
 .It Fl t Ar connect-timeout
 Wait at most
 .Ar connect-timeout
@@ -33,7 +39,8 @@ Wait at most
 .Ar wait-timeout
 seconds total
 .Po decimal fractions are allowed Pc ,
-and keep trying to connecting when connection has been refused.
+and keep trying to connecting when connection has been refused
+.Po default: only try once Pc .
 .El
 .Sh DETAILS
 .Nm

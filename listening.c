@@ -6,10 +6,12 @@
  * http://creativecommons.org/publicdomain/zero/1.0/
  */
 
+#include <sys/types.h>
 #include <sys/socket.h>
 
 #include <arpa/inet.h>
 #include <errno.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <poll.h>
@@ -19,6 +21,8 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+
+int protocol;
 
 uint64_t wait_timeout = 0;       // nanoseconds
 uint64_t connect_timeout = 200;  // milliseconds
@@ -74,25 +78,18 @@ scanfix(char *s, uint64_t *result, int scale)
 }
 
 int
-syn_scan(const char *host, int port)
+syn_scan(struct addrinfo *addr)
 {
-	printf("test %s:%d\n", host, port);
-
-	struct sockaddr_in addr;
-	memset(&addr, 0, sizeof (struct sockaddr_in));
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);
-	// XXX use GAI
-	inet_aton(host, &addr.sin_addr);
-
-	int sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+	int sock = socket(addr->ai_family,
+	    addr->ai_socktype | SOCK_NONBLOCK,
+	    addr->ai_protocol);
 	struct linger l = {1, 0};
 	setsockopt(sock, SOL_SOCKET, SO_LINGER, (void *)&l, sizeof (struct linger));
 	int zero = 0;
 	setsockopt(sock, IPPROTO_TCP, TCP_QUICKACK, (void *)&zero, sizeof zero);
 	int r;
 	errno = 0;
-	r = connect(sock, (struct sockaddr *)&addr, sizeof (struct sockaddr_in));
+	r = connect(sock, addr->ai_addr, addr->ai_addrlen);
 	if (r > 0 || errno != EINPROGRESS) {
 		fprintf(stderr, "connect failed: %m\n");
 		close(sock);
@@ -132,8 +129,10 @@ main(int argc, char *argv[])
 {
 	int c, err;
 
-	while ((c = getopt(argc, argv, "+t:w:")) != -1) {
+	while ((c = getopt(argc, argv, "+46t:w:")) != -1) {
 		switch (c) {
+		case '4': protocol = 4; break;
+		case '6': protocol = 6; break;
                 case 't':
 			if ((err = scanfix(optarg, &connect_timeout, 3)) < 0) {
 				fprintf(stderr, "failed to parse number '%s': %s\n",
@@ -151,28 +150,32 @@ main(int argc, char *argv[])
                 default:
 		usage:
                         fprintf(stderr,
-                            "Usage: %s [-w WAIT_TIMEOUT] [-t CONNECT_TIMEOUT] [HOST:]PORT\n",
+                            "Usage: %s [-w WAIT_TIMEOUT] [-t CONNECT_TIMEOUT] [HOST] PORT\n",
                             argv[0]);
-                        exit(99);
+                        return 99;
                 }
 	}
 
-	if (optind != argc - 1)
+	struct addrinfo hints = {
+		.ai_socktype = SOCK_STREAM,
+	}, *res;
+	hints.ai_family = (protocol == 4) ? AF_INET : AF_INET6;
+	hints.ai_flags = (protocol == 0) ? (AI_PASSIVE | AI_V4MAPPED) : AI_PASSIVE;
+
+	if (optind == argc - 1)
+		err = getaddrinfo("localhost", argv[argc-1], &hints, &res);
+	else if (optind == argc - 2)
+		err = getaddrinfo(argv[argc-2], argv[argc-1], &hints, &res);
+	else
 		goto usage;
 
-	int port;
-	const char *host = argv[argc-1];
-	char *colon = strchr(host, ':');
-	if (colon) {
-		*colon = 0;
-		port = atoi(colon+1);
-	} else {
-		port = atoi(host);
-		host = "127.0.0.1";
+	if (err) {
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(err));
+		return 99;
 	}
 
 	if (wait_timeout == 0)
-		return syn_scan(host, port);
+		return syn_scan(res);
 
 	/* else we are waiting for the port to come up: */
 
@@ -192,7 +195,7 @@ main(int argc, char *argv[])
 
 	while (now.tv_sec < deadline.tv_sec ||
 	    (now.tv_sec == deadline.tv_sec && now.tv_nsec <= deadline.tv_nsec)) {
-		switch (syn_scan(host, port)) {
+		switch (syn_scan(res)) {
 		case 0:
 			return 0;
 		case 99:
